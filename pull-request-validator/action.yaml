@@ -1,0 +1,85 @@
+name: Validates the Pull Request checklist
+description: Validates that the Pull Request body contains a checklist and that all items are checked. If the checklist is not present or not all items are checked, the action will fail.
+author: Barracuda Ottawa Team
+
+inputs:
+  pullrequest_body:
+    description: Pull Request Body
+    required: true
+  require_checklist:
+    description: Require checklist (true/false)
+    required: true
+    default: 'true'
+  neutron_app_id:
+    description: Neutron Github App ID
+    required: true     
+  neutron_private_key:
+    description: Neutron Github App private key
+    required: true       
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Get Github App token    
+      uses: tibdex/github-app-token@v2.1.0
+      id: repo-token
+      with:
+        app_id: ${{ inputs.neutron_app_id }}
+        private_key: ${{ inputs.neutron_private_key }}
+
+    - name: Validate Pull Request checklist
+      id: validate-checklist
+      run: |
+        $result = ${{ github.action_path }}/checklist-validator.ps1 -pullRequestBody "${{ inputs.pullrequest_body }}"
+        Write-Host "Result: $result"
+
+        $parsedResult = $result | ConvertFrom-Json
+
+        if ("${{ inputs.require_checklist }}" -eq "true" -and $parsedResult.containsChecklist -eq $false) {
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_conclusion=failure"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_summary=⛔ Pull Request does not contain a checklist"
+        } elseif ($parsedResult.containsChecklist -eq $false) {
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_conclusion=success"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_summary=✅ Pull Request does not require a checklist"
+        } elseif ($parsedResult.incompleted -gt 0) {
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_conclusion=failure"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_summary=⛔ There are incomplete checklist items"
+        } else {
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_conclusion=success"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_summary=🎉 All checklist items are completed"
+        }
+
+        # Construct the markdown content
+        $markdownContent = @"
+        ### Results
+
+        - **Pull Request contains checklist**: $([bool]$parsedResult.containsChecklist -eq $true ? "✅" : "❌")
+        - **All items checked**: $($parsedResult.incompleted -eq 0 ? "✅" : "❌")
+        - **Items ignored**: $($parsedResult.ignored)
+
+        #### Checklist:
+        $($parsedResult.items)
+        "@
+
+        # Write the markdown content to a file
+        $markdownFilePath = "checklist-validation-results.md"
+        $markdownContent | Out-File -FilePath $markdownFilePath -Encoding utf8
+
+        # print the content of the file of the file
+        Get-Content -Path $markdownFilePath
+      shell: pwsh
+
+    - name: Checklist validator check
+      if: success() || failure()
+      uses: LouisBrunner/checks-action@v2.0.0
+      with:
+        token: ${{ steps.repo-token.outputs.token }}
+        name: CheckList
+        conclusion: ${{ steps.validate-checklist.outputs.check_conclusion }}
+        output: |
+            {
+              "title": "Checklist Validation",
+              "summary": "${{ steps.validate-checklist.outputs.check_summary }}"
+            }
+        output_text_description_file: checklist-validation-results.md
