@@ -3,6 +3,8 @@ param(
     [string]$pullRequestBody
 )
 
+$ErrorActionPreference = "Stop"
+
 # Constants
 $COMMENT_START = "<!--"
 $COMMENT_END = "-->"

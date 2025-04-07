@@ -1,0 +1,65 @@
+name: Validates the Pull Request checklist
+description: Validates that the Pull Request body contains a checklist and that all items are checked. If the checklist is not present or not all items are checked, the action will fail.
+author: Barracuda Ottawa Team
+
+inputs:
+  pullrequest_title:
+    description: Pull Request Title
+    required: true
+  jira_projects:
+    description: Jira Projects
+    required: true
+    default: 'true'
+  neutron_app_id:
+    description: Neutron Github App ID
+    required: true     
+  neutron_private_key:
+    description: Neutron Github App private key
+    required: true       
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Get Github App token    
+      uses: tibdex/github-app-token@v2.1.0
+      id: repo-token
+      with:
+        app_id: ${{ inputs.neutron_app_id }}
+        private_key: ${{ inputs.neutron_private_key }}
+
+    - name: Validate Pull Request checklist
+      id: validate-checklist
+      run: |
+        $projectKeysRaw = @"
+        ${{ inputs.jira_projects }}
+        "@ 
+        $jiraProjects = $projectKeysRaw -split "`n" | ForEach-Object { $_.Trim("'`r`n ") } | Where-Object { $_ -ne "" }
+
+        $jiraTicket = & "${{ github.action_path }}/jira-ticket-validator.ps1" -pullRequestTitle "${{ inputs.pullrequest_title }}" -jiraProjects $jiraProjects
+        Write-Host "Result: $jiraTicket"
+
+        if ($jiraTicket -eq "")
+        {
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_conclusion=failure"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_summary=⛔ Pull Request does not contain a Jira ticket number"
+        }
+        else 
+        {
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_conclusion=success"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "check_summary=✅ Pull Request contains a valid Jira ticket: $jiraTicket"
+        }
+      shell: pwsh
+
+    - name: Checklist validator check
+      if: success() || failure()
+      uses: LouisBrunner/checks-action@v2.0.0
+      with:
+        token: ${{ steps.repo-token.outputs.token }}
+        name: "Pull Request Title"
+        conclusion: ${{ steps.validate-checklist.outputs.check_conclusion }}
+        output: |
+            {
+              "title": "Jira Ticket in Pull Request Title",
+              "summary": "${{ steps.validate-checklist.outputs.check_summary }}"
+            }
