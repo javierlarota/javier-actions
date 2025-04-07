@@ -52,7 +52,6 @@ runs:
       shell: pwsh
 
     - name: Checklist validator check
-      if: success() || failure()
       uses: LouisBrunner/checks-action@v2.0.0
       with:
         token: ${{ steps.repo-token.outputs.token }}
