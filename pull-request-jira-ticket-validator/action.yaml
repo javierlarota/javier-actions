@@ -56,10 +56,10 @@ runs:
       uses: LouisBrunner/checks-action@v2.0.0
       with:
         token: ${{ steps.repo-token.outputs.token }}
-        name: "Pull Request Title"
+        name: "Pull Request Title includes Jira Ticket"
         conclusion: ${{ steps.validate-checklist.outputs.check_conclusion }}
         output: |
             {
-              "title": "Jira Ticket in Pull Request Title",
+              "title": "Jira Ticket validation",
               "summary": "${{ steps.validate-checklist.outputs.check_summary }}"
             }

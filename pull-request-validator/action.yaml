@@ -75,7 +75,7 @@ runs:
       uses: LouisBrunner/checks-action@v2.0.0
       with:
         token: ${{ steps.repo-token.outputs.token }}
-        name: "Pull Request CheckList"
+        name: "All checklist items checked"
         conclusion: ${{ steps.validate-checklist.outputs.check_conclusion }}
         output: |
             {
