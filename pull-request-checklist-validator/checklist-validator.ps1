@@ -11,7 +11,7 @@ $COMMENT_END = "-->"
 
 # This regex matches task list items in the format "- [ ] item" or "- [x] item"
 # It captures the checkbox state (complete/incomplete) and the item text
-# The regex also ensures that the item does not start with "~" to exclude stroked through items
+# The regex also ensures that the item also starts with "~" to include stroked through items
 $TASK_LIST_ITEM = '(?:^|\n)\s*-\s+\[([ xX])\]\s+(~?)(.*)'
 
 # Variables
