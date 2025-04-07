@@ -62,7 +62,7 @@ runs:
         $($parsedResult.items)
 
         **Note:**
-        If any items in the checklist don’t apply, feel free to cross them out using Markdown strikethrough syntax: `~text~`
+        If any items in the checklist don't apply, feel free to cross them out using Markdown strikethrough syntax: `~text~`
         "@
 
         # Write the markdown content to a file
